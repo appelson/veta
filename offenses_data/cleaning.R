@@ -3,8 +3,88 @@ library(janitor)
 library(tidycensus)
 
 committments <- read_csv("data/current_commitments.csv") %>% clean_names()
-demographics <- read_csv("data/demographics.csv") %>% clean_names()
+demographics <- read_csv("data/demographics.csv") %>% clean_names() %>%
+  mutate(race_cat = ifelse(ethnicity == "White", "white", "non_white"))
+
+
+
+
+demographics_charges <- demographics %>%
+  filter(str_detect(controlling_offense, "PC")) %>%
+  mutate(Offenses = str_remove(controlling_offense, "PC"),
+         Offenses = str_remove(Offenses, " 2nd")) %>%
+  left_join(df, by = "Offenses")
+  
+  
 prior_committments <- read_csv("data/prior_commitments.csv") %>% clean_names()
+
+
+
+committments_pred <- read_csv("currentcommits_predicted.csv")
+demographics_pred <- read_csv("demographics_predicted.csv")
+priorcommits_predicted <- read_csv("priorcommits_predicted.csv")
+
+
+
+# HOW MANY PEOPLE
+demographics %>%
+  nrow()
+
+
+# WHO IS INCARCERATED
+demographics %>%
+  tabyl(ethnicity) %>%
+  arrange(-n)
+
+# WHO IS INCARCERATED RACE
+demographics %>%
+  tabyl(race_cat)
+
+# WHERE ARE THEY INCARCERATED
+demographics %>%
+  tabyl(current_location)
+
+# WHAT ARE THEIR CHARGES
+demographics_charges %>%
+  tabyl(description) %>%
+  arrange(-n)
+
+# WHAT ARE THEIR CHARGE TYPES
+demographics_charges %>%
+  tabyl(Type) %>%
+  arrange(-n)
+
+# WHAT ARE THEIR CHARGE TYPES BY ETHNICITY
+demographics_charges %>%
+  tabyl(Type, race_cat)
+
+# WHAT ARE THE CHARGE TYPES NOT JOINED, ETC
+demographics_charges %>%
+  filter(is.na(Type)) %>%
+  tabyl(Offenses)
+
+# SENTENCE LENGTH
+demographics %>%
+  tabyl(aggregate_sentence_in_months)
+
+
+
+
+
+
+
+demographics_pred %>%
+  tabyl(ethnicity)
+
+
+
+
+
+
+
+
+
+
 
 committments_cleaned <- committments %>%
   mutate(
@@ -16,9 +96,9 @@ committments_cleaned <- committments %>%
   ) %>%
   mutate(
     sentence_months = case_when(
-      sentence_from_abstract_of_judgement == "Condemned" ~ NA_integer_,  # or any specific number for death penalty
-      sentence_from_abstract_of_judgement == "Life w/o Parole" ~ NA_integer_,  # or any specific number
-      sentence_from_abstract_of_judgement == "Life with Parole" ~ NA_integer_,  # or any specific number
+      sentence_from_abstract_of_judgement == "Condemned" ~ NA_integer_, 
+      sentence_from_abstract_of_judgement == "Life w/o Parole" ~ NA_integer_,  
+      sentence_from_abstract_of_judgement == "Life with Parole" ~ NA_integer_, 
       sentence_from_abstract_of_judgement == "NA" | sentence_from_abstract_of_judgement == "0" ~ NA_integer_, # Replace "0" or "NA" with true NA
       TRUE ~ sentence_months
     ),
@@ -49,17 +129,20 @@ committments_cleaned <- committments %>%
 df <- read_csv("selection_criteria.csv")
 
 
-
-
-
-
-
-
-
-
-
 committments_cleaned %>%
+  filter(offense_category == "Drug Crimes") %>%
   tabyl(offense_description)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
